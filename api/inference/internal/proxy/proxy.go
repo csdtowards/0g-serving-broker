@@ -66,7 +66,7 @@ func New(ctrl *ctrl.Ctrl, engine *gin.Engine, allowOrigins []string, enableMonit
 
 func (p *Proxy) Start() error {
 	switch p.ctrl.Service.Type {
-	case "zgStorage", "chatbot":
+	case "zgStorage", "chatbot", "text-to-image":
 		p.AddHTTPRoute(p.ctrl.Service.TargetURL, p.ctrl.Service.Type)
 	default:
 		return errors.New("invalid service type")
@@ -139,6 +139,15 @@ func (p *Proxy) proxyHTTPRequest(ctx *gin.Context) {
 			p.handleBrokerError(ctx, err, "get input fee and count")
 			return
 		}
+	case "text-to-image":
+		_, steps, err := p.ctrl.GetTextToImageInputFeeAndSteps(reqBody)
+		if err != nil {
+			p.handleBrokerError(ctx, err, "get text-to-image steps")
+			return
+		}
+		// Store steps for later billing calculation
+		req.OutputCount = steps
+		expectedInputFee = "0"
 	default:
 		p.handleBrokerError(ctx, errors.New("unknown service type"), "prepare request extractor")
 		return
